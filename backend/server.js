@@ -17,6 +17,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
+app.get('/', (req, res) => {
+  res.json({ message: 'Amazon Affiliate Backend is running successfully!' });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });

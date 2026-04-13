@@ -7,7 +7,7 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import './index.css';
 
-const api = axios.create({ baseURL: 'http://localhost:5000/api' });
+const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api' });
 
 export default function App() {
   const [visitorCount, setVisitorCount] = useState(0);
