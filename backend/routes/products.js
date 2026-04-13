@@ -1,46 +1,60 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { Product } = require('../models');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
 // Public route: Get all products
-router.get('/', (req, res) => {
-  db.all('SELECT * FROM products ORDER BY createdAt DESC', [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
+router.get('/', async (req, res) => {
+  try {
+    const products = await Product.find().sort({ createdAt: -1 });
+    // Transform _id to id for the frontend
+    const mappedProducts = products.map(p => ({
+      id: p._id,
+      title: p.title,
+      description: p.description,
+      imageUrl: p.imageUrl,
+      productUrl: p.productUrl,
+      createdAt: p.createdAt
+    }));
+    res.json(mappedProducts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Protected route: Add a product
-router.post('/', authenticateToken, (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   const { title, description, imageUrl, productUrl } = req.body;
   if (!title || !productUrl) {
     return res.status(400).json({ error: 'Title and product URL are required' });
   }
 
-  const query = `INSERT INTO products (title, description, imageUrl, productUrl) VALUES (?, ?, ?, ?)`;
-  db.run(query, [title, description, imageUrl, productUrl], function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.status(201).json({ id: this.lastID, title, description, imageUrl, productUrl });
-  });
+  try {
+    const product = await Product.create({ title, description, imageUrl, productUrl });
+    res.status(201).json({ 
+      id: product._id, 
+      title: product.title, 
+      description: product.description, 
+      imageUrl: product.imageUrl, 
+      productUrl: product.productUrl 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Protected route: Delete a product
-router.delete('/:id', authenticateToken, (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  db.run('DELETE FROM products WHERE id = ?', id, function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
+  try {
+    const product = await Product.findByIdAndDelete(id);
+    if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
-    res.json({ message: 'Product deleted successfully', changes: this.changes });
-  });
+    res.json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;

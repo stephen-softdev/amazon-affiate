@@ -1,27 +1,29 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { Analytics } = require('../models');
 
 // Public route: Get visitor count
-router.get('/', (req, res) => {
-  db.get('SELECT visitorCount FROM analytics WHERE id = 1', [], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json({ count: row ? row.visitorCount : 0 });
-  });
+router.get('/', async (req, res) => {
+  try {
+    const analytics = await Analytics.findOne();
+    res.json({ count: analytics ? analytics.visitorCount : 0 });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Public route: Increment visitor count
-router.post('/hit', (req, res) => {
-  db.run('UPDATE analytics SET visitorCount = visitorCount + 1 WHERE id = 1', function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    db.get('SELECT visitorCount FROM analytics WHERE id = 1', [], (err, row) => {
-      res.json({ count: row ? row.visitorCount : 0 });
-    });
-  });
+router.post('/hit', async (req, res) => {
+  try {
+    const analytics = await Analytics.findOneAndUpdate(
+      {},
+      { $inc: { visitorCount: 1 } },
+      { new: true, upsert: true }
+    );
+    res.json({ count: analytics.visitorCount });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;
